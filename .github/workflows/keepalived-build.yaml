@@ -1,20 +1,19 @@
-name: Build Ansible Toolbox image
+name: Build keepalived image
 
 on:
   push:
     branches:
       - main
     paths:
-       - ansible-toolbox/**
-       - .github/workflows/ansible-toolbox-build.yaml
-  
-  workflow_dispatch:
-         
+       - keepalived/**
+       - .github/workflows/keepalived-build.yaml
 
+  workflow_dispatch:
+    
 env:
   repostitory: quay.io/caracan
-  context: ansible-toolbox
-  image_name: ansible-toolbox
+  context: keepalived
+  image_name: keepalived
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,16 +25,16 @@ jobs:
       - name: Get Version
         id: version_tags
         run: |
-          VERSION=$(jq -r '.version' ${context}/version.json)
-          TAGS=latest
-          if [ "${VERSION}" ] && [ "${VERSION}" != "latest" ]; then
-            TAGS+=" ${VERSION}"
-          fi
-          if [[ "${GITHUB_REF}" =~ refs/tags/(.*) ]]; then
-            TAGS+=" git-${BASH_REMATCH[1]}"
-          fi
-          echo "IMAGE_TAGS=$TAGS" >> $GITHUB_OUTPUT
-      
+            VERSION=$(jq -r '.version' ${context}/version.json)
+            TAGS=latest
+            if [ "${VERSION}" ] && [ "${VERSION}" != "latest" ]; then
+                TAGS+=" ${VERSION}"
+            fi
+            if [[ "${GITHUB_REF}" =~ refs/tags/(.*) ]]; then
+                TAGS+=" git-${BASH_REMATCH[1]}"
+            fi
+            echo "IMAGE_TAGS=$TAGS" >> $GITHUB_OUTPUT
+          
       - name: Set up qemu
         uses:  docker/setup-qemu-action@v2
 
@@ -44,11 +43,11 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           context: ${{ env.context }}
+          dockerfiles: |
+             ./${{  env.context }}/Dockerfile
           image: ${{ env.image_name }}
           tags: ${{ steps.version_tags.outputs.IMAGE_TAGS }}
-          containerfiles: |
-            ./${{  env.context }}/Containerfile
-          platforms: linux/amd64
+          archs: amd64,arm64
       
       - name: Build and publish image to Quay
         uses: redhat-actions/push-to-registry@v2
