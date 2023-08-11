@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+       - ansible-toolbox
 
 env:
   repostitory: quay.io/caracan
@@ -35,13 +37,23 @@ jobs:
         uses:  docker/setup-qemu-action@v1
 
       - name: Build Image
-        uses: redhat-actions/buildah@v2
+        id: build-image
+        uses: redhat-actions/buildah-build@v2
         with:
           context: ${{ env.context }}
           image: ${{ env.repostitory }}/${{ env.image_name }}
-          tags: steps.version_tags.outputs.IMAGE_TAGS  
+          tags: ${{ steps.version_tags.outputs.IMAGE_TAGS }}
           platform: amd64
-
+      
+      - name: Build and publish image to Quay
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build-image.outputs.image }}
+          tags: ${{ steps.build-image.outputs.tags }}
+          registry: ${{ env.repostitory }}/${{ env.image_name }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+          
     env:
       BUILDAH_FORMAT: docker
       BUILDAH_ISOLATION: chroot
