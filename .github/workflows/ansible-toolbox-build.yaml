@@ -1,0 +1,47 @@
+name: Build Ansible Toolbox image
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  repostitory: quay.io/caracan
+  context: ansible-toolbox
+  image_name: ansible-toolbox
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v2
+
+      - name: Get Version
+        id: version_tags
+        run: |
+          echo -n ::set-output name=IMAGE_TAGS::
+          VERSION=$(jq -r '.version' ${context}/version.json)
+          TAGS=('latest')
+          if [ "${VERSION}" ] && [ "${VERSION}" != "latest" ]; then
+            TAGS+=("${VERSION}")
+          fi
+          if [[ "${GITHUB_REF}" =~ refs/tags/(.*) ]]; then
+            TAGS+=("git-${BASH_REMATCH[1]}")
+          fi
+          ( IFS=$','; echo "${TAGS[*]}" ) 
+      
+      - name: Set up qemu
+        uses:  docker/setup-qemu-action@v1
+
+      - name: Build Image
+        uses: redhat-actions/buildah@v2
+        with:
+          context: ${{ env.context }}
+          image: ${{ env.repostitory }}/${{ env.image_name }}
+          tags: steps.version_tags.outputs.IMAGE_TAGS  
+          platform: amd64
+
+    env:
+      BUILDAH_FORMAT: docker
+      BUILDAH_ISOLATION: chroot
