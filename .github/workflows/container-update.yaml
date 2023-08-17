@@ -1,0 +1,26 @@
+name: Base Container update check
+
+env:
+  REGISTRY: quay.io
+  IMAGE_NAME: caracan/keepalived
+
+on:
+    workflow_dispatch: 
+
+jobs:
+    check_job:
+        runs-on: ubuntu-latest
+        name: Check if container image update required
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v3
+
+        - name: Container Image Updater
+          id: check
+          uses: mkumatag/container-image-updater-action@v1.0.5
+          with:
+            base-image: 'registry.access.redhat.com/ubi9:latest'
+            image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+        - name: Image update
+          run: echo "Image update required ${{ steps.check.outputs.needs-update }}"
