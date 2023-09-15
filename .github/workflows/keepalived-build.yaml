@@ -36,7 +36,7 @@ jobs:
             echo "IMAGE_TAGS=$TAGS" >> $GITHUB_OUTPUT
           
       - name: Set up qemu
-        uses:  docker/setup-qemu-action@v2
+        uses:  docker/setup-qemu-action@v3
 
       - name: Build Image
         id: build-image
