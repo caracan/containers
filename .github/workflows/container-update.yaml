@@ -17,7 +17,7 @@ jobs:
 
         - name: Container Image Updater
           id: check
-          uses: mkumatag/container-image-updater-action@v1.0.5
+          uses: mkumatag/container-image-updater-action@v1.0.6
           with:
             base-image: 'registry.access.redhat.com/ubi9:latest'
             image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
