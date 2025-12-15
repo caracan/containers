@@ -1,0 +1,11 @@
+FROM quay.io/hummingbird/xcaddy:latest AS builder
+
+RUN xcaddy build \
+  --with github.com/caddy-dns/cloudflare \
+  --with github.com/greenpau/caddy-security \
+  --with github.com/WeidiDeng/caddy-cloudflare-ip \
+  --with github.com/fvbommel/caddy-combine-ip-ranges
+
+FROM quay.io/hummingbird/caddy:latest
+
+COPY --from=builder /caddy/caddy /usr/bin/caddy
