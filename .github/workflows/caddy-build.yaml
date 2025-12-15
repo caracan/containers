@@ -48,6 +48,7 @@ jobs:
           image: ${{ env.image_name }}
           tags: ${{ steps.version_tags.outputs.IMAGE_TAGS }}
           archs: amd64
+          layers: true
       
       - name: Build and publish image to Quay
         uses: redhat-actions/push-to-registry@v2
