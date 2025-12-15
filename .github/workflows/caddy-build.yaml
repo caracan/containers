@@ -43,11 +43,11 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           context: ${{ env.context }}
-          dockerfiles: |
+          containerfiles: |
              ./${{  env.context }}/Containerfile
           image: ${{ env.image_name }}
           tags: ${{ steps.version_tags.outputs.IMAGE_TAGS }}
-          archs: amd64,arm64
+          archs: amd64
       
       - name: Build and publish image to Quay
         uses: redhat-actions/push-to-registry@v2
