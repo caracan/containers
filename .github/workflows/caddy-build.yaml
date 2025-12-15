@@ -44,7 +44,7 @@ jobs:
         with:
           context: ${{ env.context }}
           dockerfiles: |
-             ./${{  env.context }}/Dockerfile
+             ./${{  env.context }}/Containerfile
           image: ${{ env.image_name }}
           tags: ${{ steps.version_tags.outputs.IMAGE_TAGS }}
           archs: amd64,arm64
