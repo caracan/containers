@@ -52,10 +52,10 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          file: ./Containerfile
+          file: ./${{ env.context }}/Containerfile
           push: true
           tags: |
-            ${{ env.repostitory }}/${{ env.image_name }}:${{steps.version_tags.outputs.CONTAINER_VERSON  }}
+            ${{ env.repostitory }}/${{ env.image_name }}:${{ steps.version_tags.outputs.CONTAINER_VERSON }}
             ${{ env.repostitory }}/${{ env.image_name }}:latest
  
       - name: Verify Image
