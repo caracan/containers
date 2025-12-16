@@ -54,7 +54,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ env.repostitory }}/${{ env.image_name }}:${{ env.CONTAINER_VERSON }}
+            ${{ env.repostitory }}/${{ env.image_name }}:${{steps.version_tags.outputs.CONTAINER_VERSON  }}
             ${{ env.repostitory }}/${{ env.image_name }}:latest
  
       - name: Verify Image
