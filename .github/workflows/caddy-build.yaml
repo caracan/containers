@@ -14,14 +14,11 @@ env:
   repostitory: quay.io/caracan
   context: caddy
   image_name: caddy
-  BUILDAH_FORMAT: oci
-  BUILDAH_ISOLATION: chroot
+
 jobs:
   build:
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      packages: write 
+
     steps:
       - name: Check out the code
         uses: actions/checkout@v6
@@ -38,28 +35,27 @@ jobs:
                 TAGS+=" git-${BASH_REMATCH[1]}"
             fi
             echo "IMAGE_TAGS=$TAGS" >> $GITHUB_OUTPUT
-          
-#      - name: Set up qemu
-#        uses:  docker/setup-qemu-action@v3
+            echo "CONTAINER_VERSON=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build Image
-        id: build-image
-        uses: redhat-actions/buildah-build@v2
+      - name: Log in to Github Packages
+        uses: docker/login-action@v3
         with:
-          context: ${{ env.context }}
-          containerfiles: |
-             ./${{  env.context }}/Containerfile
-          image: ${{ env.image_name }}
-          tags: ${{ steps.version_tags.outputs.IMAGE_TAGS }}
-          archs: amd64
-          layers: true
-      
-      - name: Build and publish image to Quay
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          image: ${{ steps.build-image.outputs.image }}
-          tags: ${{ steps.build-image.outputs.tags }}
-          registry: ${{ env.repostitory }}
+          registry: quay.io
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_TOKEN }}
-
+ 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+ 
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.repostitory }}/${{ env.image_name }}:${{ env.CONTAINER_VERSON }}
+            ${{ env.repostitory }}/${{ env.image_name }}:latest
+ 
+      - name: Verify Image
+        run: docker images
