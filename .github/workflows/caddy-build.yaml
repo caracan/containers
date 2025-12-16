@@ -35,25 +35,20 @@ jobs:
             fi
             echo "IMAGE_TAGS=$TAGS" >> $GITHUB_OUTPUT
           
-      - name: Set up qemu
-        uses:  docker/setup-qemu-action@v3
+#      - name: Set up qemu
+#        uses:  docker/setup-qemu-action@v3
 
-#      - name: Build Image
-#        id: build-image
-#        uses: redhat-actions/buildah-build@v2
-#        with:
-          #context: ${{ env.context }}
-#          containerfiles: |
-#             ./${{  env.context }}/Containerfile
-#          image: ${{ env.image_name }}
-#          tags: ${{ steps.version_tags.outputs.IMAGE_TAGS }}
-#          archs: amd64
-#          layers: true
-      
-      - name: Podman Build Image
+      - name: Build Image
         id: build-image
-        run: |
-             podman build -t ${{env.image_name}}:latest -f  ./${{ env.context }}/Containerfile ${{ env.context }}
+        uses: redhat-actions/buildah-build@v2
+        with:
+          context: ${{ env.context }}
+          containerfiles: |
+             ./${{  env.context }}/Containerfile
+          image: ${{ env.image_name }}
+          tags: ${{ steps.version_tags.outputs.IMAGE_TAGS }}
+          archs: amd64
+          layers: true
       
       - name: Build and publish image to Quay
         uses: redhat-actions/push-to-registry@v2
