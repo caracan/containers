@@ -1,4 +1,4 @@
-name: Build keepalived image
+name: Build caddy image
 
 on:
   push:
@@ -19,6 +19,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Fixup GitHub homedir
+        run: |
+          mkdir -p /github/home/.docker/
+
       - name: Check out the code
         uses: actions/checkout@v6
 
@@ -42,7 +46,7 @@ jobs:
         id: build-image
         uses: redhat-actions/buildah-build@v2
         with:
-          #context: ${{ env.context }}
+          context: ${{ env.context }}
           containerfiles: |
              ./${{  env.context }}/Containerfile
           image: ${{ env.image_name }}
