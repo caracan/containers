@@ -14,6 +14,8 @@ env:
   repostitory: quay.io/caracan
   context: caddy
   image_name: caddy
+  BUILDAH_FORMAT: oci
+  BUILDAH_ISOLATION: chroot
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -57,7 +59,4 @@ jobs:
           registry: ${{ env.repostitory }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_TOKEN }}
-          
-    env:
-      BUILDAH_FORMAT: docker
-      BUILDAH_ISOLATION: chroot
+
