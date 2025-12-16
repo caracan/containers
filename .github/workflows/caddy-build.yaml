@@ -19,6 +19,9 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write 
     steps:
       - name: Check out the code
         uses: actions/checkout@v6
