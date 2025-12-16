@@ -1,0 +1,50 @@
+name: Build caddy image
+
+on:
+  push:
+    branches:
+      - actions
+    paths:
+       - caddy/**
+       - .github/workflows/multistage.yaml
+
+  workflow_dispatch:
+    
+env:
+  REPOSITORY: quay.io/caracan
+  CONTEXT: caddy
+  IMAGE_NAME: caddy
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container:
+      image: quay.io/travier/podman-action
+      options: "--security-opt=label=disable --privileged --user 0:0 --device=/dev/kvm --device=/dev/fuse"
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+
+      - name: Build container image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          context: ${{ env.IMAGE_NAME }}
+          image: ${{ env.IMAGE_NAME }}
+          tags: latest
+          containerfiles: ${{ env.IMAGE_NAME }}/Containerfile
+          layers: false
+          oci: true
+
+      - name: Push to Container Registry
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+          image: ${{ env.IMAGE_NAME }}
+          registry: ${{ env.REPOSITORY }}
+          tags: actoins
+          extra-args: |
+            --compression-format=zstd:chunked
+            --compression-level=19
+                 image: ${{ steps.build-image.outputs.image }}
+
