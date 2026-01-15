@@ -18,9 +18,9 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    container:
-      image: quay.io/travier/podman-action
-      options: "--security-opt=label=disable --privileged --user 0:0 --device=/dev/kvm --device=/dev/fuse"
+    # container:
+    #   image: quay.io/travier/podman-action
+    #   options: "--security-opt=label=disable --privileged --user 0:0 --device=/dev/kvm --device=/dev/fuse"
     steps:
       - name: Check out the code
         uses: actions/checkout@v6
@@ -30,7 +30,7 @@ jobs:
         with:
           context: ${{ env.IMAGE_NAME }}
           image: ${{ env.IMAGE_NAME }}
-          tags: latest
+          tags: actions
           containerfiles: ${{ env.IMAGE_NAME }}/Containerfile
           layers: false
           oci: true
@@ -42,9 +42,9 @@ jobs:
           password: ${{ secrets.REGISTRY_TOKEN }}
           image: ${{ env.IMAGE_NAME }}
           registry: ${{ env.REPOSITORY }}
-          tags: actoins
+          tags: actions
           extra-args: |
             --compression-format=zstd:chunked
             --compression-level=19
-                 image: ${{ steps.build-image.outputs.image }}
+ 
 
