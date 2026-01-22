@@ -1,0 +1,63 @@
+# This action runs weekly to update the z-stream version of the caddy relase and auto merge. 
+# The merge will trigger the build pipeline to build and push the new image
+name: Scheduled Version Update 
+
+on:
+  schedule:
+    # Runs at 09:00 every Monday
+    - cron: '0 09 * * 1'
+  workflow_dispatch: # Allows manual testing from the "Actions" tab
+env:
+  repostitory: quay.io/caracan
+  context: caddy
+  image_name: caddy
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    # Required permissions for the GH CLI to create and merge PRs
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create branch name
+        id: branch_gen
+        run: echo "name=caddy-version-bump-${{ github.run_id }}" >> $GITHUB_OUTPUT
+
+      - name: Create and switch branch
+        id: git_setup
+        run: git checkout -b ${{ steps.branch_gen.outputs.name }}
+
+      - name: Update version.json
+        id: version_update
+        run: |
+          jq '.["z-stream"] |= (tonumber + 1 | tostring) | .version = "\(.major).\(.minor).\(.["z-stream"])"'  ${context}/version.json > temp.json && mv temp.json  ${context}/version.json
+          echo "new_v=$(jq -r '.version'  ${context}/version.json)" >> $GITHUB_OUTPUT
+
+      - name: Commit and Push
+        id: commit_push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          git commit -m "chore: bump z-stream to ${{ steps.version_update.outputs.new_v }}"
+          git push origin ${{ steps.branch_gen.outputs.name }}
+
+      - name: Create and Merge PR
+        id: pr_manage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "Automated Version Bump: ${{ steps.version_update.outputs.new_v }}" \
+            --body "This is a weekly automated PR to increment the z-stream version." \
+            --head ${{ steps.branch_gen.outputs.name }} \
+            --base main
+
+          gh pr merge --auto --merge --delete-branch
