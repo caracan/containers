@@ -2,5 +2,18 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "description": "Pin digests only for Docker-related files",
+      "matchManagers": ["dockerfile", "docker-compose", "kubernetes"],
+      "pinDigests": true
+    },
+    {
+      "description": "Standard rules for all updates",
+      "matchPackagePatterns": ["*"],
+      "labels": ["renovate-update"],
+      "rebaseStrategy": "behind-base-branch"
+    }
   ]
 }
