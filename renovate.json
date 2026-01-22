@@ -7,7 +7,8 @@
     {
       "description": "Pin digests only for Docker-related files",
       "matchManagers": ["dockerfile", "docker-compose", "kubernetes"],
-      "pinDigests": true
+      "pinDigests": true,
+      "excludePaths": ["caddy/**"]
     },
     {
       "description": "Standard rules for all updates",
