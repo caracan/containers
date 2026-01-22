@@ -57,16 +57,16 @@ jobs:
           git commit -m "chore: auto-bump z-stream for ${{ steps.process.outputs.services }}"
           git push
 
-      - name: Telegram Notification
-        if: steps.process.outputs.updated == 'true'
-        env:
-          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          MSG="🛠 *Automation Report*%0A"
-          MSG+="Repo: ${{ github.event.repository.name }}%0A"
-          MSG+="Services Updated: \`${{ steps.process.outputs.services }}\` %0A%0A"
-          MSG+="[View Pull Request](${{ github.event.pull_request.html_url }})"
-
-          curl -s -X POST "https://api.telegram.org/bot$TOKEN/sendMessage" \
-            -d "chat_id=$CHAT_ID" -d "text=$MSG" -d "parse_mode=Markdown" -d "disable_web_page_preview=true"
+#      - name: Telegram Notification
+#        if: steps.process.outputs.updated == 'true'
+#        env:
+#          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+#          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+#        run: |
+#          MSG="🛠 *Automation Report*%0A"
+#          MSG+="Repo: ${{ github.event.repository.name }}%0A"
+#          MSG+="Services Updated: \`${{ steps.process.outputs.services }}\` %0A%0A"
+#          MSG+="[View Pull Request](${{ github.event.pull_request.html_url }})"
+#
+#          curl -s -X POST "https://api.telegram.org/bot$TOKEN/sendMessage" \
+#            -d "chat_id=$CHAT_ID" -d "text=$MSG" -d "parse_mode=Markdown" -d "disable_web_page_preview=true"
