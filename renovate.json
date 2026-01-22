@@ -7,14 +7,18 @@
     {
       "description": "Pin digests only for Docker-related files",
       "matchManagers": ["dockerfile", "docker-compose", "kubernetes"],
-      "excludePaths": ["caddy/**"],
       "pinDigests": true
+    },
+    {
+      "description": "Exclude caddy from pinning",
+      "matchPaths": ["caddy/**"],
+      "pinDigests": false
     },
     {
       "description": "Standard rules for all updates",
       "matchPackagePatterns": ["*"],
       "labels": ["renovate-update"],
-      "rebaseStrategy": "behind-base-branch"
+      "rebaseWhen": "behind-base-branch"
     }
   ]
 }
