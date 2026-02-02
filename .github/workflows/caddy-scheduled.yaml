@@ -45,7 +45,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add version.json
+          git add ${context}/version.json
           git commit -m "chore: bump z-stream to ${{ steps.version_update.outputs.new_v }}"
           git push origin ${{ steps.branch_gen.outputs.name }}
 
