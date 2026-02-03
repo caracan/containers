@@ -1,6 +1,6 @@
 {
-  "version": "5.0.5",
+  "version": "5.0.6",
   "major": "5",
   "minor": "0",
-  "z-stream": "5"
+  "z-stream": "6"
 }
