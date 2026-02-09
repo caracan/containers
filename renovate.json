@@ -4,6 +4,15 @@
     "config:recommended"
   ],
   "packageRules": [
+      {  
+        "enabled": false,
+        "matchDatasources": [
+          "docker"
+        ],
+        "matchUpdateTypes": [
+          "major"
+        ]
+    },
     {
       "description": "Pin digests only for Docker-related files",
       "matchManagers": ["dockerfile", "docker-compose", "kubernetes"],
@@ -22,3 +31,4 @@
     }
   ]
 }
+
