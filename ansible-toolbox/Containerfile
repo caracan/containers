@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora-toolbox:44@sha256:a1673c42a5531e139edd172b1db4ee1226f4ec1da0d850bb5947370ee4e8275b
+FROM registry.fedoraproject.org/fedora-toolbox:44@sha256:25cf718f54f9deb5f2f5d626587c8df7d32949ad35693a521e77b6ab37e17fe9
 
 COPY toolbox-packages /root/
 
