@@ -37,8 +37,8 @@ jobs:
       - name: Update version.json
         id: version_update
         run: |
-          jq '.["z-stream"] |= (tonumber + 1 | tostring) | .version = "\(.major).\(.minor).\(.["z-stream"])"'  ${context}/version.json > temp.json && mv temp.json  ${context}/version.json
-          echo "new_v=$(jq -r '.version'  ${context}/version.json)" >> $GITHUB_OUTPUT
+          jq '.["zstream"] |= (tonumber + 1 | tostring)'  ${context}/version.json > temp.json && mv temp.json  ${context}/version.json
+          echo "new_v=$(jq -r '.major + "." + .minor + "." + .zstream'  ${context}/version.json)" >> $GITHUB_OUTPUT
 
       - name: Commit and Push
         id: commit_push
