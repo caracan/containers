@@ -1,4 +1,4 @@
-FROM ghcr.io/siderolabs/talosctl:latest AS talosctl
+FROM ghcr.io/siderolabs/talosctl:v1.12.6 AS talosctl
 
 FROM registry.fedoraproject.org/fedora-toolbox:43
 
@@ -7,4 +7,3 @@ COPY --from=talosctl /talosctl /usr/local/bin/talosctl
 ADD kubernetes.repo /etc/yum.repos.d/
 
 RUN dnf -y install kubectl helm; dnf clean all
-

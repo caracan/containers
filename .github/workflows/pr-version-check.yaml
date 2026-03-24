@@ -8,6 +8,7 @@ on:
       - 'keepalived/**'
       - 'ansible-toolbox/**'
       - 'keepalived-init/**'
+      - 'apd-cli/**'
 
 jobs:
   check-and-bump:
