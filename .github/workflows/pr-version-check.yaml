@@ -33,7 +33,7 @@ jobs:
           MODIFIED_SERVICES=""
           touch modified_files.txt
 
-          for DIR in caddy/ keepalived/ ansible-toolbox/ keepalived-init/; do
+          for DIR in caddy/ keepalived/ ansible-toolbox/ keepalived-init/ apd-cli/; do
             if [ -f "${DIR}version.json" ]; then
               DIFF=$(git diff --name-only origin/main...HEAD -- "$DIR" | grep -v "version.json" || true)
               V_CHECK=$(git diff --name-only origin/main...HEAD -- "${DIR}version.json" || true)
