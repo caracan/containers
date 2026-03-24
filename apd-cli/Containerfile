@@ -6,5 +6,5 @@ COPY --from=talosctl /talosctl /usr/local/bin/talosctl
 
 ADD kubernetes.repo /etc/yum.repos.d/
 
-RUN dnf -y install kubectl helm; dnf clean all
+RUN dnf -y install kubectl helm libvirt-client; dnf clean all
 
