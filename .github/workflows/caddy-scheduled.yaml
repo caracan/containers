@@ -52,7 +52,7 @@ jobs:
       - name: Create and Merge PR
         id: pr_manage
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT }}
         run: |
           gh pr create \
             --title "Automated Version Bump: ${{ steps.version_update.outputs.new_v }}" \
