@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9:latest@sha256:cf13fe2aba608ea76abcac5acb3fa4d88821416e7eb45e0623a62c948853ab84 
+FROM registry.access.redhat.com/ubi9:latest@sha256:0879eaf704bf508379bdb0f465b8ea184c1ec9f1f40a413422fc17f6d3fb2389 
 
 RUN dnf install -y keepalived; dnf clean all
 
