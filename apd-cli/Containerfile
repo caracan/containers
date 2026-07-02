@@ -1,6 +1,6 @@
 FROM ghcr.io/siderolabs/talosctl:v1.13.5@sha256:260889d79299fc935eb80cc56ef04d8b609d31674b882dfdbc204374ee6a90e4 AS talosctl
 
-FROM registry.fedoraproject.org/fedora-toolbox:43@sha256:106a1e4d332cdbebcc97c78e40c11d1c41e962a9cc9c32b7e97d304abc72380d
+FROM registry.fedoraproject.org/fedora-toolbox:43@sha256:59b55762854a589006596946c3fb33e36067cb8a374a3a112e3d8c319083727e
 
 COPY --from=talosctl /talosctl /usr/local/bin/talosctl
 
