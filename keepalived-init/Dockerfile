@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9-init:latest@sha256:84d6ca6adceaded16d8c63a4e8db44e912ff2c4661eacd7260a5e6736d78b21d
+FROM registry.access.redhat.com/ubi9-init:latest@sha256:8612c884506408d354a61b9af69bf6fe78c13a818a37bf84384af53942fc1de8
 
 RUN dnf install -y keepalived; dnf clean all; systemctl enable keepalived
 
