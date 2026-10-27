@@ -1,0 +1,147 @@
+name: Build and Publish Container Images
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/version.json'
+      - '**/Dockerfile'
+      - '**/Containerfile'
+      - '**/toolbox-packages'
+      - 'apd-cli/kubernetes.repo'
+      - '.github/workflows/build-images.yaml'
+
+  workflow_dispatch:
+    inputs:
+      container:
+        description: 'Specific container to build (or "all")'
+        required: false
+        default: 'all'
+
+env:
+  repository: quay.io/caracan
+
+jobs:
+  detect-changes:
+    name: Detect Containers to Build
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.detect.outputs.matrix }}
+      has_changes: ${{ steps.detect.outputs.has_changes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Determine Containers
+        id: detect
+        run: |
+          TARGET_CONTAINER="${{ github.event.inputs.container }}"
+          CHANGED_CONTAINERS=()
+
+          if [ -n "$TARGET_CONTAINER" ] && [ "$TARGET_CONTAINER" != "all" ]; then
+            V_FILE="$TARGET_CONTAINER/version.json"
+            if [ -f "$V_FILE" ]; then
+              FILE="Containerfile"
+              [ -f "$TARGET_CONTAINER/Dockerfile" ] && FILE="Dockerfile"
+              PLATFORMS=$(jq -r '.platforms // "linux/amd64"' "$V_FILE")
+              CHANGED_CONTAINERS+=("{\"name\":\"$TARGET_CONTAINER\",\"file\":\"$FILE\",\"platforms\":\"$PLATFORMS\"}")
+            else
+              echo "Error: Container $TARGET_CONTAINER not found!" >&2
+              exit 1
+            fi
+          elif [ -n "$TARGET_CONTAINER" ] && [ "$TARGET_CONTAINER" = "all" ]; then
+            for V_FILE in */version.json; do
+              [ -f "$V_FILE" ] || continue
+              DIR=$(dirname "$V_FILE")
+              FILE="Containerfile"
+              [ -f "$DIR/Dockerfile" ] && FILE="Dockerfile"
+              PLATFORMS=$(jq -r '.platforms // "linux/amd64"' "$V_FILE")
+              CHANGED_CONTAINERS+=("{\"name\":\"$DIR\",\"file\":\"$FILE\",\"platforms\":\"$PLATFORMS\"}")
+            done
+          else
+            BASE_REF="${{ github.event.before }}"
+            if [ -z "$BASE_REF" ] || [ "$BASE_REF" = "0000000000000000000000000000000000000000" ]; then
+              BASE_REF="HEAD~1"
+            fi
+            DIFF_FILES=$(git diff --name-only "$BASE_REF" HEAD || true)
+            for V_FILE in */version.json; do
+              [ -f "$V_FILE" ] || continue
+              DIR=$(dirname "$V_FILE")
+              if echo "$DIFF_FILES" | grep -q "^$DIR/"; then
+                FILE="Containerfile"
+                [ -f "$DIR/Dockerfile" ] && FILE="Dockerfile"
+                PLATFORMS=$(jq -r '.platforms // "linux/amd64"' "$V_FILE")
+                CHANGED_CONTAINERS+=("{\"name\":\"$DIR\",\"file\":\"$FILE\",\"platforms\":\"$PLATFORMS\"}")
+              fi
+            done
+          fi
+
+          if [ ${#CHANGED_CONTAINERS[@]} -gt 0 ]; then
+            MATRIX=$(IFS=,; echo "[${CHANGED_CONTAINERS[*]}]")
+            echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "matrix=[]" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-and-publish:
+    name: Build & Push (${{ matrix.name }})
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Extract Versions and Build Tags
+        id: tags
+        run: |
+          V_FILE="./${{ matrix.name }}/version.json"
+          VERSION=$(jq -r '.major + "." + .minor + "." + .zstream' "$V_FILE")
+          MAJOR=$(jq -r '.major' "$V_FILE")
+          MINOR=$(jq -r '.minor' "$V_FILE")
+
+          IMAGE_BASE="${{ env.repository }}/${{ matrix.name }}"
+          TAGS="${IMAGE_BASE}:${VERSION}"
+          TAGS+=",${IMAGE_BASE}:${MAJOR}.${MINOR}"
+          TAGS+=",${IMAGE_BASE}:${MAJOR}"
+          TAGS+=",${IMAGE_BASE}:latest"
+
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Quay
+        uses: docker/login-action@v4
+        with:
+          registry: quay.io
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./${{ matrix.name }}
+          file: ./${{ matrix.name }}/${{ matrix.file }}
+          platforms: ${{ matrix.platforms }}
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+
+      - name: Run Test Script
+        if: hashFiles(format('{0}/test.sh', matrix.name)) != ''
+        run: |
+          chmod +x ./${{ matrix.name }}/test.sh
+          ./${{ matrix.name }}/test.sh "${{ env.repository }}/${{ matrix.name }}:${{ steps.tags.outputs.version }}"

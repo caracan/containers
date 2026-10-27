@@ -1,5 +1,7 @@
 {
   "major": "5",
   "minor": "0",
-  "zstream": "93"
+  "zstream": "93",
+  "platforms": "linux/amd64"
 }
+

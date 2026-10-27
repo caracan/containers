@@ -1,4 +1,4 @@
-# This action runs weekly to update the z-stream version of the caddy relase and auto merge. 
+# This action runs weekly to update the z-stream version of the caddy release and auto merge. 
 # The merge will trigger the build pipeline to build and push the new image
 name: Scheduled Version Update 
 
@@ -7,8 +7,9 @@ on:
     # Runs at 09:00 every Monday
     - cron: '0 09 * * 1'
   workflow_dispatch: # Allows manual testing from the "Actions" tab
+
 env:
-  repostitory: quay.io/caracan
+  repository: quay.io/caracan
   context: caddy
   image_name: caddy
 
@@ -37,8 +38,8 @@ jobs:
       - name: Update version.json
         id: version_update
         run: |
-          jq '.["zstream"] |= (tonumber + 1 | tostring)'  ${context}/version.json > temp.json && mv temp.json  ${context}/version.json
-          echo "new_v=$(jq -r '.major + "." + .minor + "." + .zstream'  ${context}/version.json)" >> $GITHUB_OUTPUT
+          jq '.["zstream"] |= (tonumber + 1 | tostring)' ${context}/version.json > temp.json && mv temp.json ${context}/version.json
+          echo "new_v=$(jq -r '.major + "." + .minor + "." + .zstream' ${context}/version.json)" >> $GITHUB_OUTPUT
 
       - name: Commit and Push
         id: commit_push
@@ -52,7 +53,7 @@ jobs:
       - name: Create and Merge PR
         id: pr_manage
         env:
-          GH_TOKEN: ${{ secrets.PAT }}
+          GH_TOKEN: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
         run: |
           gh pr create \
             --title "Automated Version Bump: ${{ steps.version_update.outputs.new_v }}" \
@@ -60,4 +61,4 @@ jobs:
             --head ${{ steps.branch_gen.outputs.name }} \
             --base main
 
-          gh pr merge --auto --merge --delete-branch
+          gh pr merge --auto --squash --delete-branch
