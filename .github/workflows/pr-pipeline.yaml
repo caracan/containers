@@ -9,10 +9,12 @@ permissions:
   pull-requests: write
 
 jobs:
-  version-bump:
-    name: Auto-bump Version
-    if: contains(github.event.pull_request.user.login, 'renovate') || contains(github.event.pull_request.labels.*.name, 'renovate-update')
+  prepare:
+    name: Prepare & Detect Changes
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.detect.outputs.matrix }}
+      has_changes: ${{ steps.detect.outputs.has_changes }}
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v7
@@ -20,12 +22,11 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-      - name: Process Bumps
-        id: process
+      - name: Bump Version (Renovate PRs)
+        if: contains(github.event.pull_request.user.login, 'renovate') || contains(github.event.pull_request.labels.*.name, 'renovate-update')
         run: |
-          UPDATED_ANY=false
-          MODIFIED_SERVICES=""
-
+          UPDATED=false
+          SERVICES=""
           for V_FILE in */version.json; do
             [ -f "$V_FILE" ] || continue
             DIR=$(dirname "$V_FILE")
@@ -35,66 +36,46 @@ jobs:
             if [ -n "$DIFF" ] && [ -z "$V_CHECK" ]; then
               jq '.["zstream"] |= (tonumber + 1 | tostring)' "$V_FILE" > temp.json && mv temp.json "$V_FILE"
               git add "$V_FILE"
-              MODIFIED_SERVICES+="$DIR, "
-              UPDATED_ANY=true
+              SERVICES+="$DIR, "
+              UPDATED=true
             fi
           done
 
-          if [ "$UPDATED_ANY" = "true" ]; then
+          if [ "$UPDATED" = "true" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -m "chore: auto-bump z-stream for ${MODIFIED_SERVICES%, }"
+            git commit -m "chore: auto-bump z-stream for ${SERVICES%, }"
             git push
           fi
-
-  detect-changes:
-    name: Detect Changed Containers
-    needs: [version-bump]
-    if: always() && !cancelled() && !contains(needs.version-bump.result, 'failure')
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.detect.outputs.matrix }}
-      has_changes: ${{ steps.detect.outputs.has_changes }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
 
       - name: Detect Changed Containers
         id: detect
         run: |
-          CHANGED_CONTAINERS=()
-          for V_FILE in */version.json; do
-            [ -f "$V_FILE" ] || continue
-            DIR=$(dirname "$V_FILE")
-            DIFF=$(git diff --name-only origin/main...HEAD -- "$DIR" || true)
-            if [ -n "$DIFF" ]; then
+          DIRS=$(git diff --name-only origin/main...HEAD | cut -d/ -f1 | sort -u)
+          MATRIX=$(
+            for DIR in $DIRS; do
+              [ -f "$DIR/version.json" ] || continue
               FILE="Containerfile"
               [ -f "$DIR/Dockerfile" ] && FILE="Dockerfile"
-              PLATFORMS=$(jq -r '.platforms // "linux/amd64"' "$V_FILE")
-              CHANGED_CONTAINERS+=("{\"name\":\"$DIR\",\"file\":\"$FILE\",\"platforms\":\"$PLATFORMS\"}")
-            fi
-          done
-
-          if [ ${#CHANGED_CONTAINERS[@]} -gt 0 ]; then
-            MATRIX=$(IFS=,; echo "[${CHANGED_CONTAINERS[*]}]")
-            echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "matrix=[]" >> $GITHUB_OUTPUT
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          fi
+              PLATFORMS=$(jq -r '.platforms // "linux/amd64"' "$DIR/version.json")
+              jq -n -c \
+                --arg name "$DIR" \
+                --arg file "$FILE" \
+                --arg platforms "$PLATFORMS" \
+                '{name: $name, file: $file, platforms: $platforms}'
+            done | jq -c -s .
+          )
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "has_changes=$([ "$MATRIX" != "[]" ] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
 
   test-build:
     name: Test Build (${{ matrix.name }})
-    needs: [detect-changes]
-    if: needs.detect-changes.outputs.has_changes == 'true'
+    needs: prepare
+    if: needs.prepare.outputs.has_changes == 'true'
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -125,7 +106,7 @@ jobs:
 
   auto-merge:
     name: Enable Auto-Merge
-    needs: [version-bump, detect-changes, test-build]
+    needs: [prepare, test-build]
     if: |
       always() &&
       (contains(github.event.pull_request.user.login, 'renovate') || contains(github.event.pull_request.labels.*.name, 'renovate-update')) &&
@@ -137,4 +118,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
         run: |
-          gh pr merge "${{ github.event.pull_request.html_url }}" --auto --squash
+          gh pr merge ${{ github.event.pull_request.number }} --auto --squash --repo ${{ github.repository }}

@@ -38,59 +38,37 @@ jobs:
       - name: Determine Containers
         id: detect
         run: |
-          TARGET_CONTAINER="${{ github.event.inputs.container }}"
-          CHANGED_CONTAINERS=()
+          TARGET="${{ github.event.inputs.container }}"
+          if [ -n "$TARGET" ] && [ "$TARGET" != "all" ]; then
+            DIRS="$TARGET"
+          elif [ "$TARGET" = "all" ]; then
+            DIRS=$(ls -d */ 2>/dev/null | tr -d '/')
+          else
+            BASE="${{ github.event.before }}"
+            [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] && BASE="HEAD~1"
+            DIRS=$(git diff --name-only "$BASE" HEAD | cut -d/ -f1 | sort -u)
+          fi
 
-          if [ -n "$TARGET_CONTAINER" ] && [ "$TARGET_CONTAINER" != "all" ]; then
-            V_FILE="$TARGET_CONTAINER/version.json"
-            if [ -f "$V_FILE" ]; then
-              FILE="Containerfile"
-              [ -f "$TARGET_CONTAINER/Dockerfile" ] && FILE="Dockerfile"
-              PLATFORMS=$(jq -r '.platforms // "linux/amd64"' "$V_FILE")
-              CHANGED_CONTAINERS+=("{\"name\":\"$TARGET_CONTAINER\",\"file\":\"$FILE\",\"platforms\":\"$PLATFORMS\"}")
-            else
-              echo "Error: Container $TARGET_CONTAINER not found!" >&2
-              exit 1
-            fi
-          elif [ -n "$TARGET_CONTAINER" ] && [ "$TARGET_CONTAINER" = "all" ]; then
-            for V_FILE in */version.json; do
-              [ -f "$V_FILE" ] || continue
-              DIR=$(dirname "$V_FILE")
+          MATRIX=$(
+            for DIR in $DIRS; do
+              [ -f "$DIR/version.json" ] || continue
               FILE="Containerfile"
               [ -f "$DIR/Dockerfile" ] && FILE="Dockerfile"
-              PLATFORMS=$(jq -r '.platforms // "linux/amd64"' "$V_FILE")
-              CHANGED_CONTAINERS+=("{\"name\":\"$DIR\",\"file\":\"$FILE\",\"platforms\":\"$PLATFORMS\"}")
-            done
-          else
-            BASE_REF="${{ github.event.before }}"
-            if [ -z "$BASE_REF" ] || [ "$BASE_REF" = "0000000000000000000000000000000000000000" ]; then
-              BASE_REF="HEAD~1"
-            fi
-            DIFF_FILES=$(git diff --name-only "$BASE_REF" HEAD || true)
-            for V_FILE in */version.json; do
-              [ -f "$V_FILE" ] || continue
-              DIR=$(dirname "$V_FILE")
-              if echo "$DIFF_FILES" | grep -q "^$DIR/"; then
-                FILE="Containerfile"
-                [ -f "$DIR/Dockerfile" ] && FILE="Dockerfile"
-                PLATFORMS=$(jq -r '.platforms // "linux/amd64"' "$V_FILE")
-                CHANGED_CONTAINERS+=("{\"name\":\"$DIR\",\"file\":\"$FILE\",\"platforms\":\"$PLATFORMS\"}")
-              fi
-            done
-          fi
+              PLATFORMS=$(jq -r '.platforms // "linux/amd64"' "$DIR/version.json")
+              jq -n -c \
+                --arg name "$DIR" \
+                --arg file "$FILE" \
+                --arg platforms "$PLATFORMS" \
+                '{name: $name, file: $file, platforms: $platforms}'
+            done | jq -c -s .
+          )
 
-          if [ ${#CHANGED_CONTAINERS[@]} -gt 0 ]; then
-            MATRIX=$(IFS=,; echo "[${CHANGED_CONTAINERS[*]}]")
-            echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "matrix=[]" >> $GITHUB_OUTPUT
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          fi
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "has_changes=$([ "$MATRIX" != "[]" ] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
 
   build-and-publish:
     name: Build & Push (${{ matrix.name }})
-    needs: [detect-changes]
+    needs: detect-changes
     if: needs.detect-changes.outputs.has_changes == 'true'
     strategy:
       fail-fast: false
