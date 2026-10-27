@@ -3,15 +3,17 @@
   "extends": [
     "config:recommended"
   ],
+  "prConcurrentLimit": 5,
   "packageRules": [
-      {  
-        "enabled": false,
-        "matchDatasources": [
-          "docker"
-        ],
-        "matchUpdateTypes": [
-          "major"
-        ]
+    {
+      "description": "Disable major docker updates",
+      "enabled": false,
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ]
     },
     {
       "description": "Pin digests only for Docker-related files",
@@ -41,4 +43,3 @@
     }
   ]
 }
-
